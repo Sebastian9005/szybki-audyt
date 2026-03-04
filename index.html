@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OZC Developer Pro</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React i Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons (CDN version) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+        
+        // Dynamiczna obsługa ikon Lucide
+        const Icon = ({ name, size = 20, className = "" }) => {
+            useEffect(() => {
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            }, [name]);
+            return <i data-lucide={name} className={className} style={{ width: size, height: size }}></i>;
+        };
+
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('input');
+            const [pum, setPum] = useState(1000);
+            const [ventilation, setVentilation] = useState('gravity');
+            const [heatPumpUnitPower, setHeatPumpUnitPower] = useState(40);
+            const [greenPremiumPerM2, setGreenPremiumPerM2] = useState(150);
+
+            const [selectedCostsHP, setSelectedCostsHP] = useState({
+                units: true, cascade_logic: true, buffers: true, electric_upgrade: true, installation: true,
+            });
+
+            const [selectedCostsGas, setSelectedCostsGas] = useState({
+                boilers: true, chimney: true, gas_connection: true, detection: true, installation: true,
+            });
+
+            // Stałe
+            const qPerM2 = ventilation === 'gravity' ? 38 : 28;
+            const totalHeatLoadKW = (pum * qPerM2) / 1000;
+            const epGas = ventilation === 'gravity' ? 78 : 68;
+            const epHeatPump = ventilation === 'gravity' ? 55 : 42;
+            const numberOfPumps = Math.ceil(totalHeatLoadKW / heatPumpUnitPower);
+
+            const costItemsHP = [
+                { id: 'units', label: 'Jednostki Pomp Ciepła (Kaskada)', pricePerKw: 2000, description: 'Agregaty zewnętrzne i moduły hydrauliczne (stawka: 2000 zł/kW)' },
+                { id: 'cascade_logic', label: 'Automatyka i sterowanie kaskadą', pricePerKw: 350, description: 'System zarządzania pracą wielu jednostek' },
+                { id: 'buffers', label: 'Zasobniki buforowe i CWU', pricePerKw: 600, description: 'Magazynowanie energii i ciepłej wody' },
+                { id: 'electric_upgrade', label: 'Modernizacja elektryczna', pricePerKw: 250, description: 'Większy przydział mocy pod sprężarki' },
+                { id: 'installation', label: 'Montaż i uruchomienie', pricePerKw: 500, description: 'Prace instalacyjne i odbiór producenta' },
+            ];
+
+            const costItemsGas = [
+                { id: 'boilers', label: 'Kotły kondensacyjne (Kaskada)', pricePerKw: 850, description: 'Wysokosprawne kotły gazowe' },
+                { id: 'chimney', label: 'Systemy kominowe i spalinowe', pricePerKw: 250, description: 'Wkłady kwasoodporne i wyprowadzenie' },
+                { id: 'gas_connection', label: 'Przyłącze gazowe i szafka', pricePerKw: 150, description: 'Projekt i wykonanie podejścia gazu' },
+                { id: 'detection', label: 'System detekcji gazu i ppoż', pricePerKw: 100, description: 'Bezpieczeństwo w kotłowni' },
+                { id: 'installation', label: 'Montaż i odbiór kominiarski', pricePerKw: 250, description: 'Prace instalacyjne i próby szczelności' },
+            ];
+
+            const totalCostHP = costItemsHP.filter(i => selectedCostsHP[i.id]).reduce((a, b) => a + (b.pricePerKw * totalHeatLoadKW), 0);
+            const totalCostGas = costItemsGas.filter(i => selectedCostsGas[i.id]).reduce((a, b) => a + (b.pricePerKw * totalHeatLoadKW), 0);
+
+            const savedSpaceM2 = Math.ceil(pum / 200) + 12;
+            const salesRevenueFromSavedSpace = savedSpaceM2 * 8000;
+            const greenMarketingProfit = pum * greenPremiumPerM2;
+            const totalBenefitHP = salesRevenueFromSavedSpace + greenMarketingProfit;
+
+            return (
+                <div className="min-h-screen pb-12">
+                    <div className="max-w-5xl mx-auto px-4 py-6 md:py-10">
+                        {/* Header */}
+                        <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div>
+                                <h1 className="text-2xl md:text-3xl font-black text-gray-900 flex items-center gap-2">
+                                    <Icon name="calculator" className="text-blue-600" size={32} /> OZC Developer Pro
+                                </h1>
+                                <p className="text-gray-500 text-xs md:text-sm font-medium">Optymalizacja źródeł ciepła w inwestycjach wielorodzinnych</p>
+                            </div>
+                            <div className="bg-white px-4 py-2 rounded-full shadow-sm border border-gray-200 text-[10px] md:text-xs font-bold text-gray-600">
+                                WERSJA PRO 1.3
+                            </div>
+                        </header>
+
+                        {/* Tabs */}
+                        <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-gray-200 mb-8 overflow-x-auto scrollbar-hide">
+                            <button onClick={() => setActiveTab('input')} className={`flex-1 py-3 px-4 md:px-6 rounded-xl font-bold text-[10px] md:text-sm transition-all flex items-center justify-center gap-2 whitespace-nowrap ${activeTab === 'input' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}>
+                                <Icon name="building-2" /> 1. Dane budynku
+                            </button>
+                            <button onClick={() => setActiveTab('cascade')} className={`flex-1 py-3 px-4 md:px-6 rounded-xl font-bold text-[10px] md:text-sm transition-all flex items-center justify-center gap-2 whitespace-nowrap ${activeTab === 'cascade' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}>
+                                <Icon name="layers" /> 2. Dobór urządzeń
+                            </button>
+                            <button onClick={() => setActiveTab('costs')} className={`flex-1 py-3 px-4 md:px-6 rounded-xl font-bold text-[10px] md:text-sm transition-all flex items-center justify-center gap-2 whitespace-nowrap ${activeTab === 'costs' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}>
+                                <Icon name="coins" /> 3. Kosztorys & Zysk
+                            </button>
+                        </div>
+
+                        {/* Content Area */}
+                        <main className="animate-fade-in">
+                            {activeTab === 'input' && (
+                                <div className="space-y-6">
+                                    <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-xl">
+                                        <div className="flex items-center gap-3">
+                                            <Icon name="info" className="text-blue-500 shrink-0" />
+                                            <p className="text-xs md:text-sm text-blue-800 leading-relaxed">
+                                                <strong>Status techniczny:</strong> Standard WT 2021: Okna 3-szybowe (U &lt; 0.9), Izolacja ścian (styropian min. 15-20cm, U &lt; 0.20), Izolacja dachu (U &lt; 0.15).
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                                            <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">Powierzchnia PUM (m²)</label>
+                                            <div className="relative">
+                                                <Icon name="building-2" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                                <input type="number" value={pum} onChange={(e) => setPum(Number(e.target.value))} className="w-full pl-10 pr-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xl font-bold" />
+                                            </div>
+                                        </div>
+                                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                                            <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">Rodzaj wentylacji</label>
+                                            <div className="flex gap-2">
+                                                <button onClick={() => setVentilation('gravity')} className={`flex-1 py-4 px-4 rounded-xl border-2 transition-all flex items-center justify-center gap-2 font-bold ${ventilation === 'gravity' ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                                                    <Icon name="wind" /> Grawitacyjna
+                                                </button>
+                                                <button onClick={() => setVentilation('mechanical')} className={`flex-1 py-4 px-4 rounded-xl border-2 transition-all flex items-center justify-center gap-2 font-bold ${ventilation === 'mechanical' ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                                                    <Icon name="settings-2" /> Mechaniczna
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-3xl text-white shadow-lg">
+                                            <div className="flex items-center gap-2 opacity-80 mb-2">
+                                                <Icon name="thermometer" size={18} />
+                                                <span className="text-xs font-bold uppercase tracking-wider">Zapotrzebowanie q</span>
+                                            </div>
+                                            <div className="text-4xl md:text-5xl font-black">{qPerM2} W/m²</div>
+                                            <div className="text-[10px] opacity-70 mt-2 italic">Wyliczone na podstawie WT 2021</div>
+                                        </div>
+                                        <div className="bg-white p-6 rounded-3xl border-2 border-blue-100 shadow-sm flex flex-col justify-center">
+                                            <div className="flex items-center gap-2 text-gray-500 mb-2">
+                                                <Icon name="zap" size={18} className="text-blue-500" />
+                                                <span className="text-xs font-bold uppercase tracking-wider">Łączna Moc</span>
+                                            </div>
+                                            <div className="text-4xl md:text-5xl font-black text-gray-800">{totalHeatLoadKW.toFixed(1)} kW</div>
+                                        </div>
+                                        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
+                                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                                <span>Energia Pierwotna (EP)</span>
+                                            </div>
+                                            <div className="space-y-3 text-xs">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-gray-600 font-medium">Pompa Ciepła</span>
+                                                    <span className="text-green-600 font-black text-lg">~{epHeatPump}</span>
+                                                </div>
+                                                <div className="w-full bg-gray-100 rounded-full h-2">
+                                                    <div className="bg-green-500 h-full rounded-full" style={{width: `${(epHeatPump/100)*100}%`}}></div>
+                                                </div>
+                                                <div className="flex justify-between items-center pt-1">
+                                                    <span className="text-gray-600 font-medium">Kocioł Gazowy</span>
+                                                    <span className="text-red-500 font-black text-lg">~{epGas}</span>
+                                                </div>
+                                                <div className="w-full bg-gray-100 rounded-full h-2">
+                                                    <div className="bg-red-400 h-full rounded-full" style={{width: `${(epGas/100)*100}%`}}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'cascade' && (
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+                                            <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+                                                <Icon name="layers" className="text-blue-600" /> Dobór urządzeń kaskady
+                                            </h3>
+                                            <label className="block text-xs font-black text-gray-400 mb-4 uppercase tracking-widest">Moc pojedynczej jednostki: {heatPumpUnitPower} kW</label>
+                                            <input type="range" min="10" max="100" step="5" value={heatPumpUnitPower} onChange={(e) => setHeatPumpUnitPower(Number(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                                            <div className="flex justify-between text-[10px] text-gray-400 mt-4 font-bold">
+                                                <span>10 kW</span>
+                                                <span>50 kW</span>
+                                                <span>100 kW</span>
+                                            </div>
+                                        </div>
+                                        <div className="bg-indigo-700 p-8 rounded-3xl shadow-xl text-white flex flex-col justify-center items-center">
+                                            <div className="text-xs font-bold opacity-70 mb-2 uppercase tracking-widest text-center">Wymagana liczba jednostek</div>
+                                            <div className="text-7xl font-black tracking-tighter mb-4">{numberOfPumps} <span className="text-2xl font-normal opacity-50">SZT.</span></div>
+                                            <div className="w-full pt-4 border-t border-indigo-500 flex justify-between text-xs font-bold">
+                                                <span className="opacity-70 italic text-[11px]">Nadmiarowość:</span>
+                                                <span className="text-green-300">+{((numberOfPumps * heatPumpUnitPower) - totalHeatLoadKW).toFixed(1)} kW</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white p-6 rounded-3xl border-2 border-blue-50">
+                                        <h3 className="text-xs font-black mb-6 text-blue-900 uppercase tracking-widest text-center">Dlaczego warto wybrać Pompy Ciepła?</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100 flex flex-col gap-3">
+                                                <div className="flex items-center gap-2 text-blue-700 font-black text-xs uppercase"><Icon name="leaf" size={16} /> Niska emisja</div>
+                                                <p className="text-sm text-gray-600 leading-relaxed italic">Brak spalin na miejscu inwestycji eliminuje potrzebę budowy wysokich kominów i ogranicza smog. Inwestycja staje się "Zero Emission Ready", co podnosi jej prestiż rynkowy.</p>
+                                            </div>
+                                            <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100 flex flex-col gap-3">
+                                                <div className="flex items-center gap-2 text-blue-700 font-black text-xs uppercase"><Icon name="zap" size={16} /> Bezpieczeństwo</div>
+                                                <p className="text-sm text-gray-600 leading-relaxed italic">Brak instalacji gazowej wewnątrz budynku to mniejsze ryzyko wybuchu i zatrucia czadem. Upraszcza to procedury odbiorowe ppoż i obniża koszty ubezpieczenia obiektu.</p>
+                                            </div>
+                                            <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100 flex flex-col gap-3">
+                                                <div className="flex items-center gap-2 text-blue-700 font-black text-xs uppercase"><Icon name="trending-up" size={16} /> Wartość PUM</div>
+                                                <p className="text-sm text-gray-600 leading-relaxed italic">Rezygnacja z kotłowni gazowej pozwala na odzyskanie metrów kwadratowych, które można przeznaczyć na lokale mieszkalne lub komórki lokatorskie, realnie zwiększając zysk.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'costs' && (
+                                <div className="space-y-8">
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                        {/* Pompy Ciepła */}
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-3 px-2">
+                                                <Icon name="zap" className="text-green-600" size={24} />
+                                                <h3 className="text-xl font-black text-gray-800 uppercase tracking-tighter">System Pompy Ciepła</h3>
+                                            </div>
+                                            <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
+                                                <div className="divide-y divide-gray-100">
+                                                    {costItemsHP.map(item => (
+                                                        <div key={item.id} onClick={() => setSelectedCostsHP(v => ({...v, [item.id]: !v[item.id]}))} className={`p-4 flex items-start gap-3 transition-all cursor-pointer hover:bg-gray-50 ${selectedCostsHP[item.id] ? 'bg-white' : 'bg-gray-50 opacity-40'}`}>
+                                                            <div className="mt-1 shrink-0">{selectedCostsHP[item.id] ? <Icon name="check-square" className="text-blue-600" /> : <Icon name="square" className="text-gray-300" />}</div>
+                                                            <div className="flex-1">
+                                                                <div className="text-sm font-bold text-gray-800">{item.label}</div>
+                                                                <div className="text-[10px] text-gray-400 font-medium">{item.description}</div>
+                                                            </div>
+                                                            <div className="text-right font-black text-sm">{(item.pricePerKw * totalHeatLoadKW).toLocaleString()} zł</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <div className="p-6 bg-green-600 text-white flex justify-between items-center">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-80 italic">Inwestycja HP</span>
+                                                    <span className="text-2xl md:text-3xl font-black tracking-tighter">{totalCostHP.toLocaleString()} PLN</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Kotłownia Gazowa */}
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-3 px-2">
+                                                <Icon name="flame" className="text-orange-600" size={24} />
+                                                <h3 className="text-xl font-black text-gray-800 uppercase tracking-tighter">Kotłownia Gazowa</h3>
+                                            </div>
+                                            <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
+                                                <div className="divide-y divide-gray-100">
+                                                    {costItemsGas.map(item => (
+                                                        <div key={item.id} onClick={() => setSelectedCostsGas(v => ({...v, [item.id]: !v[item.id]}))} className={`p-4 flex items-start gap-3 transition-all cursor-pointer hover:bg-gray-50 ${selectedCostsGas[item.id] ? 'bg-white' : 'bg-gray-50 opacity-40'}`}>
+                                                            <div className="mt-1 shrink-0">{selectedCostsGas[item.id] ? <Icon name="check-square" className="text-orange-600" /> : <Icon name="square" className="text-gray-300" />}</div>
+                                                            <div className="flex-1">
+                                                                <div className="text-sm font-bold text-gray-800">{item.label}</div>
+                                                                <div className="text-[10px] text-gray-400 font-medium">{item.description}</div>
+                                                            </div>
+                                                            <div className="text-right font-black text-sm">{(item.pricePerKw * totalHeatLoadKW).toLocaleString()} zł</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <div className="p-6 bg-orange-600 text-white flex justify-between items-center">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-80 italic">Inwestycja GAZ</span>
+                                                    <span className="text-2xl md:text-3xl font-black tracking-tighter">{totalCostGas.toLocaleString()} PLN</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Business Analysis Box */}
+                                    <div className="bg-indigo-950 text-white p-8 md:p-12 rounded-[40px] shadow-2xl border-t-8 border-yellow-400">
+                                        <div className="flex items-center gap-4 mb-8">
+                                            <Icon name="trending-up" className="text-yellow-400" size={32} />
+                                            <h3 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter">Analiza Wartości Dodanej</h3>
+                                        </div>
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                                            <div className="space-y-8">
+                                                <div className="bg-white/5 p-6 rounded-2xl border border-white/10 hover:border-white/30 transition-all">
+                                                    <h4 className="text-yellow-400 font-bold mb-3 flex items-center gap-2 uppercase tracking-wide text-sm"><Icon name="layers" size={16} /> Zysk powierzchni PUM</h4>
+                                                    <div className="flex justify-between items-end">
+                                                        <div>
+                                                            <div className="text-[10px] uppercase opacity-60 font-bold">Odzyskany PUM</div>
+                                                            <div className="text-3xl font-black text-white">{savedSpaceM2} m²</div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="text-[10px] uppercase opacity-60 font-bold">Przychód sprzedaży</div>
+                                                            <div className="text-3xl font-black text-green-400">~{salesRevenueFromSavedSpace.toLocaleString()} zł</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
+                                                    <h4 className="text-green-400 font-bold mb-4 flex items-center gap-2 uppercase tracking-wide text-sm"><Icon name="leaf" size={16} /> Strategia "Green Premium"</h4>
+                                                    <label className="text-[10px] opacity-60 block mb-2 uppercase font-black">Wzrost ceny (PLN/m² PUM):</label>
+                                                    <input type="number" value={greenPremiumPerM2} onChange={e => setGreenPremiumPerM2(Number(e.target.value))} className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-2xl font-black w-full text-yellow-400 focus:outline-none focus:border-yellow-400 transition-all mb-4" />
+                                                    <div className="text-right text-xs font-bold text-green-300">Dodatkowy przychód: +{greenMarketingProfit.toLocaleString()} zł</div>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-yellow-400 text-indigo-950 p-10 rounded-[32px] flex flex-col justify-center items-center shadow-lg transform md:rotate-1">
+                                                <div className="text-[10px] uppercase tracking-[0.2em] font-black mb-2 opacity-70">Bilans biznesowy wyboru HP</div>
+                                                <div className="text-5xl md:text-7xl font-black tracking-tighter italic">
+                                                    {(totalBenefitHP - (totalCostHP - totalCostGas)).toLocaleString()} 
+                                                </div>
+                                                <div className="text-xl font-bold uppercase mt-1">PLN ZYSKU</div>
+                                                <div className="mt-8 pt-8 border-t border-indigo-950/20 w-full text-[10px] font-bold space-y-2 opacity-80">
+                                                    <div className="flex justify-between uppercase"><span>Większy Capex HP:</span> <span>-{ (totalCostHP - totalCostGas).toLocaleString() } zł</span></div>
+                                                    <div className="flex justify-between uppercase"><span>Przychód z PUM & EKO:</span> <span>+{ (salesRevenueFromSavedSpace + greenMarketingProfit).toLocaleString() } zł</span></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </main>
+
+                        {/* Footer / Disclaimer */}
+                        <footer className="mt-16 text-center text-[10px] md:text-xs text-gray-400 max-w-2xl mx-auto border-t border-gray-200 pt-8 space-y-4">
+                            <p className="leading-relaxed">
+                                Wszystkie obliczenia mają charakter szacunkowy i poglądowy. Dokładne dane powinny zostać zweryfikowane przez uprawnionego projektanta instalacji sanitarnych na podstawie projektu budowlanego.
+                            </p>
+                            <p className="font-medium">
+                                Przyjęto średnią cenę sprzedaży PUM na poziomie 8000 zł/m² oraz standard izolacji przegród zgodny z WT 2021. Prawa zastrzeżone dla wersji deweloperskiej OZC.
+                            </p>
+                        </footer>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
